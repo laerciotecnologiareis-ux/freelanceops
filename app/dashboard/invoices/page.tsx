@@ -9,7 +9,7 @@ type Invoice = {
   client_id: string | null;
   amount: number;
   due_date: string;
-  status: "pending" | "paid" | "overdue";
+  status: "pendente" | "pago" | "atrasado";
   description: string | null;
   created_at: string;
   client?: { name: string } | null;
@@ -19,7 +19,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "paid" | "overdue">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "pendente" | "pago" | "atrasado">("all");
   const [showForm, setShowForm] = useState(false);
   const [clientId, setClientId] = useState("");
   const [amount, setAmount] = useState("");
@@ -34,26 +34,22 @@ export default function InvoicesPage() {
   const loadInvoices = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-
     const { data } = await supabase
       .from("invoices")
       .select("*, client:clients(name)")
       .eq("user_id", user.id)
       .order("due_date", { ascending: false });
-
     setInvoices(data ?? []);
   };
 
   const loadClients = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-
     const { data } = await supabase
       .from("clients")
       .select("id, name")
       .eq("user_id", user.id)
       .order("name");
-
     setClients(data ?? []);
   };
 
@@ -67,7 +63,7 @@ export default function InvoicesPage() {
       client_id: clientId || null,
       amount: parseFloat(amount),
       due_date: dueDate,
-      status: "pending",
+      status: "pendente",
       description,
     });
 
@@ -80,12 +76,12 @@ export default function InvoicesPage() {
   };
 
   const markAsPaid = async (id: string) => {
-    await supabase.from("invoices").update({ status: "paid" }).eq("id", id);
+    await supabase.from("invoices").update({ status: "pago" }).eq("id", id);
     loadInvoices();
   };
 
   const markAsOverdue = async (id: string) => {
-    await supabase.from("invoices").update({ status: "overdue" }).eq("id", id);
+    await supabase.from("invoices").update({ status: "atrasado" }).eq("id", id);
     loadInvoices();
   };
 
@@ -96,18 +92,19 @@ export default function InvoicesPage() {
   });
 
   const totalPending = invoices
-    .filter((i) => i.status === "pending")
+    .filter((i) => i.status === "pendente")
     .reduce((acc, i) => acc + Number(i.amount), 0);
 
-  const statusColors = {
-    pending: "bg-yellow-100 text-yellow-700",
-    paid: "bg-green-100 text-green-700",
-    overdue: "bg-red-100 text-red-700",
+  const statusColors: Record<string, string> = {
+    pendente: "bg-yellow-100 text-yellow-700",
+    pago: "bg-green-100 text-green-700",
+    atrasado: "bg-red-100 text-red-700",
   };
-  const statusLabels = {
-    pending: "Pendente",
-    paid: "Pago",
-    overdue: "Atrasado",
+
+  const statusLabels: Record<string, string> = {
+    pendente: "Pendente",
+    pago: "Pago",
+    atrasado: "Atrasado",
   };
 
   return (
@@ -173,7 +170,7 @@ export default function InvoicesPage() {
       )}
 
       <div className="flex gap-2 mb-4">
-        {(["all", "pending", "paid", "overdue"] as const).map((s) => (
+        {(["all", "pendente", "pago", "atrasado"] as const).map((s) => (
           <button
             key={s}
             onClick={() => setFilterStatus(s)}
@@ -181,7 +178,7 @@ export default function InvoicesPage() {
               filterStatus === s ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
             }`}
           >
-            {s === "all" ? "Todas" : s === "pending" ? "Pendentes" : s === "paid" ? "Pagas" : "Atrasadas"}
+            {s === "all" ? "Todas" : s === "pendente" ? "Pendentes" : s === "pago" ? "Pagas" : "Atrasadas"}
           </button>
         ))}
       </div>
@@ -216,7 +213,7 @@ export default function InvoicesPage() {
               <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusColors[inv.status]}`}>
                 {statusLabels[inv.status]}
               </span>
-              {inv.status === "pending" && (
+              {inv.status === "pendente" && (
                 <>
                   <button onClick={() => markAsPaid(inv.id)} className="text-green-500 hover:text-green-700" title="Marcar como pago">
                     <Check size={18} />
